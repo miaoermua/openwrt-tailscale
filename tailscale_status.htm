@@ -1,0 +1,45 @@
+<!-- /usr/lib/lua/luci/view/tailscale/tailscale_status.htm -->
+<div class="cbi-map">
+    <h2><%:Tailscale Logs%></h2>
+    <div class="cbi-section">
+        <div class="cbi-value">
+            <div id="ts_logs" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                <%=translate("Loading...")%>
+            </div>
+            <button id="login_button" style="display: none; margin-top: 10px;" class="cbi-button cbi-button-apply"><%=translate("Login to Tailscale")%></button>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    function fetchTailscaleLogs() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '<%=luci.dispatcher.build_url("admin/services/tailscale/status")%>', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var data = JSON.parse(xhr.responseText);
+                var logsDiv = document.getElementById('ts_logs');
+                if (data.status === "ok") {
+                    logsDiv.innerHTML = data.output.replace(/\n/g, '<br>');
+                    var loginUrl = data.output.match(/https:\/\/login\.tailscale\.com\/[a-zA-Z0-9]+/);
+                    if (loginUrl) {
+                        document.getElementById('login_button').style.display = 'inline-block';
+                        document.getElementById('login_button').onclick = function() {
+                            window.open(loginUrl[0], '_blank');
+                        };
+                    } else {
+                        document.getElementById('login_button').style.display = 'none';
+                    }
+                } else {
+                    logsDiv.innerHTML = "<%=translate('Failed to fetch logs.')%>";
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchTailscaleLogs();
+        setInterval(fetchTailscaleLogs, 5000); // 每5秒刷新一次日志
+    });
+</script>
